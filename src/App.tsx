@@ -1,10 +1,11 @@
+import {ThemeProvider} from "@/components/theme-provider.tsx";
+import ChatPage from "@/pages/ChatPage.tsx";
+
 function App() {
   return (
-    <>
-      <h1 className="text-3xl font-bold underline text-sky-50">
-        Hello world!
-      </h1>
-    </>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <ChatPage />
+    </ThemeProvider>
   )
 }
 
