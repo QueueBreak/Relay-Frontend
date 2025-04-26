@@ -9,7 +9,9 @@ export function MessageBubble({from, text}: MessageBubbleProps) {
     <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
       <div
         className={`px-4 py-2 rounded-2xl max-w-[70%] ${
-          isMe ? "bg-primary text-primary-foreground" : "bg-muted"
+          isMe
+            ? "bg-primary text-primary-foreground"
+            : "bg-secondary text-secondary-foreground"
         }`}
       >
         {text}
