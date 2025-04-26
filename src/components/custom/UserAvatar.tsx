@@ -1,16 +1,10 @@
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar"
 
-//TODO: Make src mandatory
-interface UserAvatarProps {
-  src?: string
-  fallbackText: string
-}
-
-export function UserAvatar({src, fallbackText}: UserAvatarProps) {
+export function UserAvatar() {
   return (
     <Avatar>
-      <AvatarImage src={src}/>
-      <AvatarFallback>{fallbackText}</AvatarFallback>
+      <AvatarImage src="https://i.pravatar.cc/100"/>
+      <AvatarFallback>ME</AvatarFallback>
     </Avatar>
   )
 }
