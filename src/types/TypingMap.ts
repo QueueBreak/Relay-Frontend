@@ -1,0 +1,1 @@
+export type TypingMap = Record<string, Set<string>>
