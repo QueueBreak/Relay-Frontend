@@ -3,7 +3,7 @@ import {useCallback, useEffect, useState} from "react";
 import {getMessagesBefore, getMostRecentChatMessages} from "@/api/messages.ts";
 import {ChatMessage} from "@/types/ChatMessage.ts";
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 30
 
 export function useChatMessages(chatRoomId: string) {
   const {

@@ -9,7 +9,7 @@ import RegisterPage from "@/pages/RegisterPage.tsx";
 import {AuthProvider} from "@/features/auth/AuthProvider.tsx";
 import {chatLayoutLoader} from "@/loaders/chatLayoutLoader.ts";
 import {chatPageLoader} from "@/loaders/chatPageLoader.ts";
-import ChatPage from "@/pages/ChatPage.tsx";
+import ChatPageWrapper from "@/components/custom/ChatPageWrapper.tsx";
 
 const router = createBrowserRouter([
   {
@@ -33,7 +33,7 @@ const router = createBrowserRouter([
       {
         path: "chat/:chatId",
         loader: chatPageLoader,
-        element: <ChatPage/>
+        element: <ChatPageWrapper/>
       }
     ],
   },

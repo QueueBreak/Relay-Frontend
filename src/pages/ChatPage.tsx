@@ -1,23 +1,25 @@
-import { ChatHeader } from "@/components/custom/ChatHeader";
-import { ChatInput } from "@/components/custom/ChatInput";
-import { MessageBubble } from "@/components/custom/MessageBubble";
-import { useLoaderData, useNavigation } from "react-router";
-import { ChatRoomWithParticipants } from "@/types/ChatRoomWithParticipants.ts";
+import {ChatHeader} from "@/components/custom/ChatHeader";
+import {ChatInput} from "@/components/custom/ChatInput";
+import {useLoaderData, useNavigation} from "react-router";
+import {ChatRoomWithParticipants} from "@/types/ChatRoomWithParticipants.ts";
 import Loader from "@/components/custom/Loader.tsx";
-import { useAuth } from "@/features/auth/useAuth.ts";
-import { useChatMessages } from "@/hooks/useChatMessages.ts";
-import { useEffect, useRef } from "react";
-import { format, isToday, isYesterday } from "date-fns";
-import { ChatMessage } from "@/types/ChatMessage.ts";
-import { ChatDateDivider } from "@/components/custom/ChatDateDivider.tsx";
+import {useAuth} from "@/features/auth/useAuth.ts";
+import {useChatMessages} from "@/hooks/useChatMessages.ts";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {format, isToday, isYesterday} from "date-fns";
+import {ChatMessage} from "@/types/ChatMessage.ts";
+import {ChatDateDivider} from "@/components/custom/ChatDateDivider.tsx";
+import AnimatedMessageBubble from "@/components/custom/AnimatedMessageBubble.tsx";
+import ScrollToBottomButton from "@/components/custom/ScrollToButtomButton.tsx";
+import NewMessagesDivider from "@/components/custom/NewMessageDivider.tsx";
 
 export default function ChatPage() {
-  const { chatRoomWithParticipants } = useLoaderData() as {
+  const {chatRoomWithParticipants} = useLoaderData() as {
     chatRoomWithParticipants: ChatRoomWithParticipants;
   };
 
-  const { user, isLoading: isUserLoading } = useAuth();
-  const { state: navigationState } = useNavigation();
+  const {user, isLoading: isUserLoading} = useAuth();
+  const {state: navigationState} = useNavigation();
   const chatRoomId = chatRoomWithParticipants.chatRoomId;
 
   const {
@@ -30,16 +32,113 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const anchorMessageRef = useRef<HTMLDivElement | null>(null);
+
   const initialScrollDone = useRef(false);
   const shouldScrollToBottomRef = useRef(false);
-  const isUserAtBottomRef = useRef(true);
+  const isUserAtBottomRef = useRef(false);
+  const isFetchingRef = useRef(false);
+
+  const lastAnimatedMessageIdRef = useRef<string | null>(null);
+  const suppressInitialAnimationRef = useRef(true);
+  const lastMessageIdAtMount = useRef(chatMessages[chatMessages.length - 1]?.id);
+
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [firstUnreadMessageId, setFirstUnreadMessageId] = useState<string | null>(null)
+  const [lastUnreadMessageId, setLastUnreadMessageId] = useState<string | null>(null);
+  const lastSeenMessageIdRef = useRef<string | null>(null);
+  const hasMountedRef = useRef(false);
 
   const isLoading = isUserLoading || navigationState !== "idle";
+
+  const firstMessageId = chatMessages[0]?.id;
+  const lastMessageId = chatMessages[chatMessages.length - 1]?.id;
+  const isNewMessage = !!lastMessageId && lastMessageId !== lastAnimatedMessageIdRef.current;
+
+  const hasScrolledPastLastUnreadRef = useRef(false);
+  const unreadDismissTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const onScroll = useCallback(async () => {
+    const container = scrollRef.current;
+    if (!container || isFetchingRef.current) return;
+
+    const nearTop = container.scrollTop <= 64;
+
+    isUserAtBottomRef.current = Math.abs(
+      container.scrollHeight - container.scrollTop - container.clientHeight
+    ) < 50;
+
+    setShowScrollButton(!isUserAtBottomRef.current);
+
+    if (nearTop && hasMore && !areChatMessagesLoading) {
+      isFetchingRef.current = true;
+
+      const anchor = anchorMessageRef.current;
+      const topBefore = anchor?.getBoundingClientRect().top ?? 0;
+      const firstMessageIdBefore = chatMessages[0]?.id;
+
+      try {
+        await fetchOlderMessages(firstMessageIdBefore);
+      } finally {
+        requestAnimationFrame(() => {
+          const topAfter = anchor?.getBoundingClientRect().top ?? 0;
+          scrollRef.current!.scrollTop += topAfter - topBefore;
+          isFetchingRef.current = false;
+        });
+      }
+    }
+
+    if (lastUnreadMessageId) {
+      const unreadElement = document.getElementById(`msg-${lastUnreadMessageId}`);
+      if (unreadElement && container) {
+        const unreadBottom = unreadElement.getBoundingClientRect().bottom;
+        const containerBottom = container.getBoundingClientRect().bottom;
+
+        const hasScrolledPast = unreadBottom < containerBottom;
+
+        if (hasScrolledPast && !hasScrolledPastLastUnreadRef.current) {
+          hasScrolledPastLastUnreadRef.current = true;
+
+          unreadDismissTimeoutRef.current = setTimeout(() => {
+            setUnreadCount(0);
+            setFirstUnreadMessageId(null);
+            setLastUnreadMessageId(null);
+            lastSeenMessageIdRef.current =
+              chatMessages[chatMessages.length - 1]?.id ?? null;
+          }, 2200);
+        } else if (!hasScrolledPast && hasScrolledPastLastUnreadRef.current) {
+          hasScrolledPastLastUnreadRef.current = false;
+          if (unreadDismissTimeoutRef.current) {
+            clearTimeout(unreadDismissTimeoutRef.current);
+            unreadDismissTimeoutRef.current = null;
+          }
+        }
+      }
+    }
+  }, [chatMessages, fetchOlderMessages, hasMore, areChatMessagesLoading, lastUnreadMessageId]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      suppressInitialAnimationRef.current = false;
+      lastAnimatedMessageIdRef.current = lastMessageIdAtMount.current ?? null;
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     if (!initialScrollDone.current && chatMessages.length > 0) {
       bottomRef.current?.scrollIntoView({ behavior: "auto" });
       initialScrollDone.current = true;
+
+      lastSeenMessageIdRef.current = chatMessages[chatMessages.length - 1]?.id ?? null;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          hasMountedRef.current = true;
+        });
+      });
+
       return;
     }
 
@@ -49,8 +148,8 @@ export default function ChatPage() {
       return;
     }
 
-    if (isUserAtBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isUserAtBottomRef.current && initialScrollDone.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
     }
   }, [chatMessages]);
 
@@ -58,40 +157,58 @@ export default function ChatPage() {
     const container = scrollRef.current;
     if (!container) return;
 
-    const onScroll = async () => {
-      const nearTop = container.scrollTop <= 64;
-
-      const nearBottom =
-        Math.abs(
-          container.scrollHeight - container.scrollTop - container.clientHeight
-        ) < 16;
-
-      isUserAtBottomRef.current = nearBottom;
-
-      if (nearTop && hasMore && !areChatMessagesLoading) {
-        const anchor = anchorMessageRef.current;
-        const topBefore = anchor?.getBoundingClientRect().top ?? 0;
-
-        await fetchOlderMessages(chatMessages[0]?.id);
-
-        requestAnimationFrame(() => {
-          const topAfter = anchor?.getBoundingClientRect().top ?? 0;
-          const delta = topAfter - topBefore;
-          container.scrollTop += delta;
-        });
-      }
-    };
-
     container.addEventListener("scroll", onScroll);
     return () => container.removeEventListener("scroll", onScroll);
-  }, [chatMessages, fetchOlderMessages, hasMore, areChatMessagesLoading]);
+  }, [onScroll]);
 
-  if (isLoading) return <Loader fullscreen={false} />;
+  useEffect(() => {
+    if (
+      !suppressInitialAnimationRef.current &&
+      isNewMessage &&
+      lastMessageId &&
+      initialScrollDone.current &&
+      hasMountedRef.current &&
+      !isUserAtBottomRef.current
+    ) {
+      const lastSeenId = lastSeenMessageIdRef.current;
+      const lastSeenIndex = chatMessages.findIndex(m => m.id === lastSeenId);
 
-  const grouped = groupMessagesByDate(chatMessages);
+      if (lastSeenIndex === -1) return;
+
+      const newUnread = chatMessages.slice(lastSeenIndex + 1).filter(
+        msg => msg.senderUserAccountId !== user?.userAccountId
+      );
+
+      if (newUnread.length > 0) {
+        setUnreadCount(newUnread.length);
+
+        if (!firstUnreadMessageId) {
+          setFirstUnreadMessageId(newUnread[0].id);
+        }
+
+        setLastUnreadMessageId(newUnread[newUnread.length - 1].id);
+      }
+
+      lastAnimatedMessageIdRef.current = lastMessageId;
+    }
+  }, [isNewMessage, lastMessageId, chatMessages, user, firstUnreadMessageId]);
+
+  const handleMessageSent = useCallback(() => {
+    shouldScrollToBottomRef.current = true;
+    setUnreadCount(0);
+    setFirstUnreadMessageId(null);
+    lastSeenMessageIdRef.current = chatMessages[chatMessages.length - 1]?.id ?? null;
+  }, [chatMessages]);
+
+  const groupedMessages = useMemo(
+    () => groupMessagesByDate(chatMessages),
+    [chatMessages]
+  );
+
+  if (isLoading) return <Loader fullscreen={false}/>;
 
   return (
-    <div className="flex flex-col flex-1 bg-card h-full">
+    <div className="flex flex-col flex-1 bg-card h-full relative">
       <div className="shrink-0">
         <ChatHeader
           displayName={chatRoomWithParticipants.displayName}
@@ -111,25 +228,31 @@ export default function ChatPage() {
       >
         {areChatMessagesLoading && hasMore && (
           <div className="py-2">
-            <Loader fullscreen={false} />
+            <Loader fullscreen={false}/>
           </div>
         )}
 
-        {Object.entries(grouped).map(([label, messages]) => (
+        {Object.entries(groupedMessages).map(([label, messages]) => (
           <div key={label} className="space-y-2">
-            <ChatDateDivider label={label} />
+            <ChatDateDivider label={label}/>
             {messages.map((msg) => {
-              const isFirst = msg.id === chatMessages[0]?.id;
+              const isFirst = msg.id === firstMessageId;
+              const isLast = msg.id === lastMessageId;
+              const shouldAnimate =
+                hasMountedRef.current &&
+                !suppressInitialAnimationRef.current &&
+                isNewMessage &&
+                isLast;
+
               return (
-                <div key={msg.id} ref={isFirst ? anchorMessageRef : null}>
-                  <MessageBubble
-                    from={
-                      msg.senderUserAccountId === user?.userAccountId
-                        ? "me"
-                        : "them"
-                    }
-                    text={msg.messageContent}
-                    timestamp={msg.timestamp}
+                <div key={msg.id} id={`msg-${msg.id}`}>
+                  {msg.id === firstUnreadMessageId && <NewMessagesDivider />}
+                  <AnimatedMessageBubble
+                    key={msg.id}
+                    msg={msg}
+                    from={msg.senderUserAccountId === user?.userAccountId ? "me" : "them"}
+                    animate={shouldAnimate}
+                    anchorRef={isFirst ? anchorMessageRef : undefined}
                   />
                 </div>
               );
@@ -137,16 +260,22 @@ export default function ChatPage() {
           </div>
         ))}
 
-        <div ref={bottomRef} />
+        <div ref={bottomRef} className="mb-4"/>
       </div>
 
-      <div className="shrink-0">
-        <ChatInput
-          chatRoomId={chatRoomId}
-          onMessageSent={() => {
-            shouldScrollToBottomRef.current = true;
+      {showScrollButton &&
+        <ScrollToBottomButton
+          onClick={() => {
+            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+            setUnreadCount(0);
+            lastSeenMessageIdRef.current = chatMessages[chatMessages.length - 1]?.id ?? null;
           }}
+          unreadCount={unreadCount}
         />
+      }
+
+      <div className="shrink-0">
+        <ChatInput chatRoomId={chatRoomId} onMessageSent={handleMessageSent}/>
       </div>
     </div>
   );
