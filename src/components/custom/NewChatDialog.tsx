@@ -1,14 +1,20 @@
-import {useEffect, useState} from "react"
-import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog"
+import {useEffect, useRef, useState} from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {Button} from "@/components/ui/button"
-import {Friend} from "@/types/Friend.ts";
-import {useNavigate} from "react-router";
-import {getAllFriends} from "@/api/friends.ts";
-import Loader from "@/components/custom/Loader.tsx";
-import AddFriendDialog from "@/components/custom/AddFriendDialog.tsx";
-import {createChatRoom} from "@/api/chatrooms.ts";
-import {useAuth} from "@/features/auth/useAuth.ts";
-import {CreateChatRoomRequest} from "@/types/CreateChatRoomRequest.ts";
+import {Friend} from "@/types/Friend.ts"
+import {useNavigate} from "react-router"
+import {getAllFriends} from "@/api/friends.ts"
+import Loader from "@/components/custom/Loader.tsx"
+import AddFriendDialog from "@/components/custom/AddFriendDialog.tsx"
+import {createChatRoom} from "@/api/chatrooms.ts"
+import {useAuth} from "@/features/auth/useAuth.ts"
+import {CreateChatRoomRequest} from "@/types/CreateChatRoomRequest.ts"
 
 interface NewChatDialogProps {
   open: boolean
@@ -22,34 +28,40 @@ export function NewChatDialog({open, onOpenChange, onChatCreated}: NewChatDialog
   const [showAddFriendDialog, setShowAddFriendDialog] = useState(false)
   const {user} = useAuth()
   const navigate = useNavigate()
+  const prevAddFriendDialogRef = useRef(showAddFriendDialog)
+
+  const fetchFriends = async () => {
+    setIsLoading(true)
+    try {
+      const friends = await getAllFriends()
+      setFriends(friends)
+    } catch {
+      setFriends([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    if (!open) return;
-    setIsLoading(true)
-
-    const fetchFriends = async () => {
-      try {
-        const friends = await getAllFriends();
-        setFriends(friends);
-      } catch {
-        setFriends([]);
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchFriends();
+    if (open) fetchFriends()
   }, [open])
+
+  useEffect(() => {
+    if (prevAddFriendDialogRef.current && !showAddFriendDialog) {
+      fetchFriends()
+    }
+    prevAddFriendDialogRef.current = showAddFriendDialog
+  }, [showAddFriendDialog])
 
   async function handleStartChat(friend: Friend) {
     try {
-      const userDisplayName = user?.displayName ?? "";
+      const userDisplayName = user?.displayName ?? ""
       const createChatRoomRequest: CreateChatRoomRequest = {
         chatRoomType: "direct",
-        participants: [friend.displayName, userDisplayName]
+        participants: [friend.displayName, userDisplayName],
       }
       const createChatRoomResponse = await createChatRoom(createChatRoomRequest)
-      onChatCreated();
+      onChatCreated()
       navigate(`/chat/${createChatRoomResponse.chatRoomId}`)
       onOpenChange(false)
     } catch (err) {
@@ -63,11 +75,13 @@ export function NewChatDialog({open, onOpenChange, onChatCreated}: NewChatDialog
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Start a new chat</DialogTitle>
-            <DialogDescription>Select a friend to begin a new conversation.</DialogDescription>
+            <DialogDescription>
+              Select a friend to begin a new conversation.
+            </DialogDescription>
           </DialogHeader>
 
           {isLoading ? (
-            <Loader fullscreen={false}/>
+            <Loader fullscreen={false} />
           ) : (
             <div className="space-y-2">
               {friends.map((friend) => (
@@ -84,14 +98,20 @@ export function NewChatDialog({open, onOpenChange, onChatCreated}: NewChatDialog
           )}
 
           <div className="pt-4 text-right">
-            <Button variant="outline" onClick={() => setShowAddFriendDialog(true)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowAddFriendDialog(true)}
+            >
               Add Friend
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <AddFriendDialog open={showAddFriendDialog} onOpenChange={setShowAddFriendDialog} />
+      <AddFriendDialog
+        open={showAddFriendDialog}
+        onOpenChange={setShowAddFriendDialog}
+      />
     </>
   )
 }

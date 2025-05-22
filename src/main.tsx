@@ -10,6 +10,7 @@ import {AuthProvider} from "@/features/auth/AuthProvider.tsx";
 import {chatLayoutLoader} from "@/loaders/chatLayoutLoader.ts";
 import {chatPageLoader} from "@/loaders/chatPageLoader.ts";
 import ChatPageWrapper from "@/components/custom/ChatPageWrapper.tsx";
+import {Toaster} from "@/components/ui/toaster.tsx";
 
 const router = createBrowserRouter([
   {
@@ -43,6 +44,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <Toaster/>
         <RouterProvider router={router}/>
       </ThemeProvider>
     </AuthProvider>
