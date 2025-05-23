@@ -30,9 +30,6 @@ export function ChatRoomStoreProvider({children}: { children: React.ReactNode })
           if (timestamp < currentTs) return room;
 
           const isUnread = currentChatId !== chatRoomId;
-          console.log(currentChatId)
-          console.log(chatRoomId)
-          console.log(isUnread);
           return {
             ...room,
             lastMessage: message,
