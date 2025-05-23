@@ -1,4 +1,4 @@
-import {useChatStore} from "@/features/chatstore/useChatStore.ts";
+import {useChatStore} from "@/features/messagestore/useChatStore.ts";
 import {useCallback, useEffect, useState} from "react";
 import {getMessagesBefore, getMostRecentChatMessages} from "@/api/messages.ts";
 import {ChatMessage} from "@/types/ChatMessage.ts";

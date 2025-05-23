@@ -2,13 +2,19 @@ import {useAuth} from "@/features/auth/useAuth.ts";
 import {useEffect, useRef, useState} from "react";
 import {WebSocketContext} from "@/features/websocket/WebSocketContext.tsx";
 import {WebSocketMessage} from "@/types/WebSocketMessage.ts";
-import {useChatStore} from "@/features/chatstore/useChatStore.ts";
+import {useChatStore} from "@/features/messagestore/useChatStore.ts";
+import {useChatRoomStore} from "@/features/chatroomsstore/useChatRoomStore.tsx";
+import {useParams} from "react-router";
+import {ChatMessage} from "@/types/ChatMessage.ts";
+import {TypingMessage} from "@/types/TypingMessage.ts";
 
 export function WebSocketProvider({children}: { children: React.ReactNode }) {
   const {user} = useAuth()
-  const {appendMessage} = useChatStore();
+  const {appendMessage, setTyping} = useChatStore();
+  const {updateChatRoomPreview} = useChatRoomStore();
   const [isReady, setIsReady] = useState(false)
   const socketRef = useRef<WebSocket | null>(null)
+  const { chatId } = useParams<{ chatId: string }>();
 
   useEffect(() => {
     const token = localStorage.getItem("access_token")
@@ -35,13 +41,27 @@ export function WebSocketProvider({children}: { children: React.ReactNode }) {
 
         switch (webSocketMessage.type) {
           case "chat": {
-            const chatMessage = webSocketMessage.payload;
+            const chatMessage = webSocketMessage.payload as ChatMessage;
+
+            updateChatRoomPreview(
+              chatMessage.destinationChatRoomId,
+              chatMessage.messageContent,
+              chatMessage.timestamp,
+              chatId
+            );
             appendMessage(chatMessage.destinationChatRoomId, chatMessage)
             break
           }
-          case "typing":
-            console.log("typing")
-            break
+          case "typing": {
+            const typingMessage = webSocketMessage.payload as TypingMessage;
+
+            setTyping(
+              typingMessage.destinationChatRoomId,
+              typingMessage.senderUserAccountId,
+              typingMessage.typing
+            );
+            break;
+          }
           // case "presence":
           //   console.log("presence")
           //   break
@@ -57,7 +77,7 @@ export function WebSocketProvider({children}: { children: React.ReactNode }) {
       socket.close()
       socketRef.current = null
     }
-  }, [user])
+  }, [appendMessage, chatId, setTyping, updateChatRoomPreview, user])
 
   const send = (msg: WebSocketMessage) => {
     const socket = socketRef.current

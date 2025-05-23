@@ -1,5 +1,5 @@
 import {useContext} from "react";
-import {ChatStoreContext} from "@/features/chatstore/ChatStoreContext.tsx";
+import {ChatStoreContext} from "@/features/messagestore/ChatStoreContext.tsx";
 
 export function useChatStore() {
   const ctx = useContext(ChatStoreContext);

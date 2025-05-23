@@ -2,7 +2,7 @@ import {ReactNode, useCallback, useState} from "react";
 import {ChatMessagesMap} from "@/types/ChatMessagesMap.ts";
 import {TypingMap} from "@/types/TypingMap.ts";
 import {ChatMessage} from "@/types/ChatMessage.ts";
-import {ChatStoreContext} from "@/features/chatstore/ChatStoreContext.tsx";
+import {ChatStoreContext} from "@/features/messagestore/ChatStoreContext.tsx";
 
 export function ChatStoreProvider({children}: { children: ReactNode }) {
   const [chatMessagesMap, setChatMessagesMap] = useState<ChatMessagesMap>({});

@@ -3,7 +3,7 @@ import {Navigate, Outlet} from "react-router";
 import {useAuth} from "@/features/auth/useAuth.ts";
 import Loader from "@/components/custom/Loader.tsx";
 import {WebSocketProvider} from "@/features/websocket/WebSocketProvider.tsx";
-import {ChatStoreProvider} from "@/features/chatstore/ChatStoreProvider.tsx";
+import {ChatStoreProvider} from "@/features/messagestore/ChatStoreProvider.tsx";
 
 
 export default function ChatLayout() {

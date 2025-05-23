@@ -3,21 +3,57 @@ import {ChatListItem} from "./ChatListItem"
 import {UserAvatar} from "./UserAvatar"
 import {Button} from "@/components/ui/button.tsx";
 import {useAuth} from "@/features/auth/useAuth.ts";
-import {useLoaderData, useRevalidator} from "react-router";
-import {ChatRoom} from "@/types/ChatRoom.ts";
 import {Plus} from "lucide-react";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {NewChatDialog} from "@/components/custom/NewChatDialog.tsx";
+import {getUserChatRooms} from "@/api/chatrooms.ts";
+import {useChatRoomStore} from "@/features/chatroomsstore/useChatRoomStore.tsx";
+import {ChatRoomWithParticipants} from "@/types/ChatRoomWithParticipants.ts";
 
 export function Sidebar() {
   const {user, logout} = useAuth()
-  const {chatRooms} = useLoaderData() as { chatRooms: ChatRoom[] }
-  const revalidator = useRevalidator()
   const [showNewChatModal, setShowNewChatModal] = useState(false)
+  const {chatRooms, addOrUpdateRoom} = useChatRoomStore();
 
-  function handleNewRoomCreated() {
-    revalidator.revalidate();
+  async function handleNewRoomCreated() {
+    try {
+      const updatedRooms = await getUserChatRooms();
+      updatedRooms.forEach(room => {
+        const chatRoomWithParticipants: ChatRoomWithParticipants = {
+          chatRoomId: room.chatRoomId,
+          displayName: room.displayName,
+          lastMessage: room.lastMessage,
+          lastMessageTimestamp: room.lastMessageTimestamp,
+          chatRoomType: "direct",
+          participants: []
+        }
+
+        addOrUpdateRoom(chatRoomWithParticipants);
+      });
+    } catch (err) {
+      console.error("Failed to refresh chat rooms after new room creation", err);
+    }
   }
+
+  useEffect(() => {
+    getUserChatRooms()
+      .then(rooms => {
+        rooms.forEach(room => {
+          const chatRoomWithParticipants: ChatRoomWithParticipants = {
+            chatRoomId: room.chatRoomId,
+            displayName: room.displayName,
+            lastMessage: room.lastMessage,
+            lastMessageTimestamp: room.lastMessageTimestamp,
+            chatRoomType: "direct",
+            participants: []
+          }
+
+          addOrUpdateRoom(chatRoomWithParticipants);
+        });
+      })
+      .catch(err => console.error("Failed to load chat rooms", err));
+  }, [addOrUpdateRoom]);
+
 
   return (
     <div className="h-full w-[350px] bg-background border-r flex flex-col">
@@ -46,12 +82,13 @@ export function Sidebar() {
       <Separator/>
 
       <div className="overflow-y-auto flex-1">
-        {chatRooms.map((chatRoom: ChatRoom) => (
+        {chatRooms.map((chatRoom: ChatRoomWithParticipants) => (
           <ChatListItem
             key={chatRoom.chatRoomId}
             name={chatRoom.displayName}
             chatRoomId={chatRoom.chatRoomId}
-            lastMessage={"To be added"}
+            lastMessage={chatRoom.lastMessage}
+            isUnread={chatRoom.isUnread}
           />
         ))}
       </div>

@@ -1,8 +1,8 @@
 import {Participant} from "@/types/Participant.ts";
+import {ChatRoom} from "@/types/ChatRoom.ts";
 
-export interface ChatRoomWithParticipants {
-  chatRoomId: string
+export interface ChatRoomWithParticipants extends ChatRoom{
   chatRoomType: "direct" | "group"
-  displayName: string
   participants: Participant[]
+  isUnread?: boolean
 }

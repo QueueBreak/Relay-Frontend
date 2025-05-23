@@ -1,33 +1,36 @@
 import {ChatHeader} from "@/components/custom/ChatHeader";
 import {ChatInput} from "@/components/custom/ChatInput";
-import {useLoaderData, useNavigation} from "react-router";
-import {ChatRoomWithParticipants} from "@/types/ChatRoomWithParticipants.ts";
+import {useNavigation, useParams} from "react-router";
 import Loader from "@/components/custom/Loader.tsx";
 import {useAuth} from "@/features/auth/useAuth.ts";
 import {useChatMessages} from "@/hooks/useChatMessages.ts";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import {format, isToday, isYesterday} from "date-fns";
 import {ChatMessage} from "@/types/ChatMessage.ts";
 import {ChatDateDivider} from "@/components/custom/ChatDateDivider.tsx";
 import AnimatedMessageBubble from "@/components/custom/AnimatedMessageBubble.tsx";
 import ScrollToBottomButton from "@/components/custom/ScrollToButtomButton.tsx";
 import NewMessagesDivider from "@/components/custom/NewMessageDivider.tsx";
+import {useChatRoomStore} from "@/features/chatroomsstore/useChatRoomStore.tsx";
+import {getChatRoomWithParticipants} from "@/api/chatrooms.ts";
+import {TypingIndicatorBubble} from "@/components/custom/TypingIndicatorBubble.tsx";
+import {useTypingUsers} from "@/hooks/useTypingUsers.ts";
 
 export default function ChatPage() {
-  const {chatRoomWithParticipants} = useLoaderData() as {
-    chatRoomWithParticipants: ChatRoomWithParticipants;
-  };
+  const {chatId} = useParams<{ chatId: string }>();
+  const {getChatRoomById, addOrUpdateRoom, markChatAsRead} = useChatRoomStore();
+  const chatRoomWithParticipants = chatId ? getChatRoomById(chatId) : undefined;
+  const typingUsers = useTypingUsers(chatId ?? "");
 
   const {user, isLoading: isUserLoading} = useAuth();
   const {state: navigationState} = useNavigation();
-  const chatRoomId = chatRoomWithParticipants.chatRoomId;
 
   const {
     chatMessages,
     loading: areChatMessagesLoading,
     fetchOlderMessages,
     hasMore,
-  } = useChatMessages(chatRoomId);
+  } = useChatMessages(chatId ?? "");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -66,7 +69,7 @@ export default function ChatPage() {
 
     isUserAtBottomRef.current = Math.abs(
       container.scrollHeight - container.scrollTop - container.clientHeight
-    ) < 50;
+    ) < 200;
 
     setShowScrollButton(!isUserAtBottomRef.current);
 
@@ -117,6 +120,23 @@ export default function ChatPage() {
     }
   }, [chatMessages, fetchOlderMessages, hasMore, areChatMessagesLoading, lastUnreadMessageId]);
 
+  const isHydrated = !!chatRoomWithParticipants?.participants?.length; // or some better signal
+
+  useEffect(() => {
+    if (!chatId || isHydrated) return;
+
+    const fetchAndStoreRoom = async () => {
+      try {
+        const fetchedRoom = await getChatRoomWithParticipants(chatId);
+        addOrUpdateRoom(fetchedRoom);
+      } catch (err) {
+        console.error("Failed to fetch chat room:", err);
+      }
+    };
+
+    fetchAndStoreRoom();
+  }, [chatId, isHydrated, addOrUpdateRoom]);
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       suppressInitialAnimationRef.current = false;
@@ -128,7 +148,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!initialScrollDone.current && chatMessages.length > 0) {
-      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      bottomRef.current?.scrollIntoView({behavior: "auto"});
       initialScrollDone.current = true;
 
       lastSeenMessageIdRef.current = chatMessages[chatMessages.length - 1]?.id ?? null;
@@ -143,13 +163,13 @@ export default function ChatPage() {
     }
 
     if (shouldScrollToBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      bottomRef.current?.scrollIntoView({behavior: "smooth"});
       shouldScrollToBottomRef.current = false;
       return;
     }
 
     if (isUserAtBottomRef.current && initialScrollDone.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      bottomRef.current?.scrollIntoView({behavior: "auto"});
     }
   }, [chatMessages]);
 
@@ -160,6 +180,22 @@ export default function ChatPage() {
     container.addEventListener("scroll", onScroll);
     return () => container.removeEventListener("scroll", onScroll);
   }, [onScroll]);
+
+  useLayoutEffect(() => {
+    if (!initialScrollDone.current || !isUserAtBottomRef.current) return;
+
+    bottomRef.current?.scrollIntoView({ behavior: "auto" });
+  }, [chatMessages]);
+
+  useEffect(() => {
+    if (
+      typingUsers.length > 0 &&
+      typingUsers.some(id => id !== user?.userAccountId) &&
+      isUserAtBottomRef.current
+    ) {
+      bottomRef.current?.scrollIntoView({behavior: "smooth"});
+    }
+  }, [typingUsers, user]);
 
   useEffect(() => {
     if (
@@ -205,12 +241,19 @@ export default function ChatPage() {
     [chatMessages]
   );
 
-  if (isLoading) return <Loader fullscreen={false}/>;
+  useEffect(() => {
+    if (chatId) {
+      markChatAsRead(chatId);
+    }
+  }, [chatId, markChatAsRead]);
+
+  if (!chatMessages || !chatId || !chatRoomWithParticipants || isLoading) return <Loader fullscreen={false}/>;
 
   return (
     <div className="flex flex-col flex-1 bg-card h-full relative">
       <div className="shrink-0">
         <ChatHeader
+          chatRoomId={chatId}
           displayName={chatRoomWithParticipants.displayName}
           status="online"
         />
@@ -246,7 +289,7 @@ export default function ChatPage() {
 
               return (
                 <div key={msg.id} id={`msg-${msg.id}`}>
-                  {msg.id === firstUnreadMessageId && <NewMessagesDivider />}
+                  {msg.id === firstUnreadMessageId && <NewMessagesDivider/>}
                   <AnimatedMessageBubble
                     key={msg.id}
                     msg={msg}
@@ -260,13 +303,17 @@ export default function ChatPage() {
           </div>
         ))}
 
+        {typingUsers.length > 0 && typingUsers.some(id => id !== user?.userAccountId) && (
+          <TypingIndicatorBubble/>
+        )}
+
         <div ref={bottomRef} className="mb-4"/>
       </div>
 
       {showScrollButton &&
         <ScrollToBottomButton
           onClick={() => {
-            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+            bottomRef.current?.scrollIntoView({behavior: "smooth"});
             setUnreadCount(0);
             lastSeenMessageIdRef.current = chatMessages[chatMessages.length - 1]?.id ?? null;
           }}
@@ -275,7 +322,7 @@ export default function ChatPage() {
       }
 
       <div className="shrink-0">
-        <ChatInput chatRoomId={chatRoomId} onMessageSent={handleMessageSent}/>
+        <ChatInput chatRoomId={chatId} onMessageSent={handleMessageSent}/>
       </div>
     </div>
   );
@@ -285,7 +332,8 @@ function groupMessagesByDate(messages: ChatMessage[]) {
   const groups: Record<string, ChatMessage[]> = {};
 
   for (const msg of messages) {
-    const date = new Date(msg.timestamp);
+    const date = new Date(msg.timestamp * 1000);
+
     const label = isToday(date)
       ? "Today"
       : isYesterday(date)
