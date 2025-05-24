@@ -2,11 +2,11 @@ import {motion} from "framer-motion";
 
 export function TypingIndicatorBubble() {
   return (
-    <div className="flex justify-start px-14 mb-1">
+    <div className="flex justify-start px-14 mt-1 mb-1">
       <div
         className={`
           max-w-[75%]
-          px-3 pt-1.5 pb-4 pr-15
+          px-3 pt-3 pb-3.5 pr-15
           rounded-xl
           text-sm
           relative

@@ -1,6 +1,6 @@
-import {ChatMessage} from "@/types/ChatMessage.ts";
+import { ChatMessage } from "@/types/ChatMessage.ts";
 import * as React from "react";
-import {MessageBubble} from "@/components/custom/MessageBubble.tsx";
+import { MessageBubble } from "@/components/custom/MessageBubble.tsx";
 import { motion } from "framer-motion";
 
 interface AnimatedMessageBubbleProps {
@@ -8,6 +8,11 @@ interface AnimatedMessageBubbleProps {
   from: "me" | "them";
   animate: boolean;
   anchorRef?: React.Ref<HTMLDivElement>;
+  chatRoomId: string;
+  onMediaLoaded?: () => void;
+  isGroupChat?: boolean;
+  senderUserAccountId?: string;
+  getDisplayNameById?: (id: string) => string;
 }
 
 export default function AnimatedMessageBubble({
@@ -15,6 +20,8 @@ export default function AnimatedMessageBubble({
                                                 from,
                                                 animate,
                                                 anchorRef,
+                                                chatRoomId,
+                                                onMediaLoaded,
                                               }: AnimatedMessageBubbleProps) {
   const bubble = (
     <MessageBubble
@@ -22,6 +29,9 @@ export default function AnimatedMessageBubble({
       from={from}
       text={msg.messageContent}
       timestamp={msg.timestamp}
+      attachmentFileName={msg.attachmentFileName}
+      chatRoomId={chatRoomId}
+      onMediaLoaded={onMediaLoaded}
     />
   );
 
@@ -29,9 +39,9 @@ export default function AnimatedMessageBubble({
     <div key={msg.id} ref={anchorRef}>
       {animate ? (
         <motion.div
-          initial={{opacity: 0, translateY: 8}}
-          animate={{opacity: 1, translateY: 0}}
-          transition={{duration: 0.25, ease: "easeIn"}}
+          initial={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ duration: 0.25, ease: "easeIn" }}
         >
           {bubble}
         </motion.div>

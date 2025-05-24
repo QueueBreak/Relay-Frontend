@@ -16,7 +16,15 @@ export async function getChatRoomWithParticipants(chatRoomId: string): Promise<C
   return response.data
 }
 
-export async function createChatRoom(createChatRoomRequest: CreateChatRoomRequest): Promise<CreateChatRoomResponse> {
+export async function createDirectChatRoom(createChatRoomRequest: CreateChatRoomRequest): Promise<CreateChatRoomResponse> {
   const response = await privateApi.post<CreateChatRoomResponse>(CHATROOMS_API, createChatRoomRequest)
+  return response.data
+}
+
+export async function createGroupChatRoom(createChatRoomRequest: CreateChatRoomRequest, displayName: string): Promise<CreateChatRoomResponse> {
+  const response = await privateApi.post<CreateChatRoomResponse>(
+    `${CHATROOMS_API}?displayName=${displayName}`,
+    createChatRoomRequest
+  )
   return response.data
 }

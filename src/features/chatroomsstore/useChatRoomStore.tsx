@@ -1,6 +1,7 @@
 import * as React from "react";
-import {createContext, useCallback, useContext, useState} from "react";
+import {createContext, useCallback, useContext, useEffect, useState} from "react";
 import {ChatRoomWithParticipants} from "@/types/ChatRoomWithParticipants.ts";
+import {useAuth} from "@/features/auth/useAuth.ts";
 
 type ChatRoomStoreContextType = {
   chatRooms: ChatRoomWithParticipants[];
@@ -14,6 +15,7 @@ const ChatRoomStoreContext = createContext<ChatRoomStoreContextType | null>(null
 
 export function ChatRoomStoreProvider({children}: { children: React.ReactNode }) {
   const [chatRooms, setChatRooms] = useState<ChatRoomWithParticipants[]>([]);
+  const { user } = useAuth();
 
   const updateChatRoomPreview = useCallback(
     (
@@ -47,6 +49,11 @@ export function ChatRoomStoreProvider({children}: { children: React.ReactNode })
     },
     []
   );
+
+  useEffect(() => {
+    // When user changes (login or logout), clear the chat rooms
+    setChatRooms([]);
+  }, [user?.userAccountId]);
 
   const markChatAsRead = useCallback((chatRoomId: string) => {
     setChatRooms(prev =>

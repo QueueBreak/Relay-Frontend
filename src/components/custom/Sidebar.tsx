@@ -59,7 +59,10 @@ export function Sidebar() {
     <div className="h-full w-[350px] bg-background border-r flex flex-col">
       <div className="p-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Chats</h2>
-        <UserAvatar fallbackText={user?.displayName.substring(0, 1) ?? ""}/>
+        <div className="flex items-center gap-3">
+          <span className="text-base font-medium text-foreground">{user?.displayName}</span>
+          <UserAvatar fallbackText={user?.displayName?.substring(0, 1) ?? ""}/>
+        </div>
       </div>
 
       <div className="px-4 pb-2">

@@ -61,6 +61,16 @@ export default function ChatPage() {
   const hasScrolledPastLastUnreadRef = useRef(false);
   const unreadDismissTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const getDisplayNameById = useCallback(
+    (id: string): string => {
+      return (
+        chatRoomWithParticipants?.participants.find(p => p.userAccountId === id)
+          ?.displayName ?? "Unknown"
+      );
+    },
+    [chatRoomWithParticipants]
+  );
+
   const onScroll = useCallback(async () => {
     const container = scrollRef.current;
     if (!container || isFetchingRef.current) return;
@@ -148,8 +158,9 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!initialScrollDone.current && chatMessages.length > 0) {
-      bottomRef.current?.scrollIntoView({behavior: "auto"});
       initialScrollDone.current = true;
+
+      scrollToBottomWhenLayoutStabilizes(scrollRef.current!, bottomRef.current!);
 
       lastSeenMessageIdRef.current = chatMessages[chatMessages.length - 1]?.id ?? null;
 
@@ -199,6 +210,28 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (
+      initialScrollDone.current &&
+      unreadCount > 0 &&
+      !isUserAtBottomRef.current &&
+      scrollRef.current
+    ) {
+      const container = scrollRef.current;
+      const contentHeight = container.scrollHeight;
+      const containerHeight = container.clientHeight;
+
+      const allMessagesFit = contentHeight <= containerHeight + 2;
+
+      if (allMessagesFit) {
+        setUnreadCount(0);
+        setFirstUnreadMessageId(null);
+        setLastUnreadMessageId(null);
+        lastSeenMessageIdRef.current = chatMessages[chatMessages.length - 1]?.id ?? null;
+      }
+    }
+  }, [chatMessages, unreadCount]);
+
+  useEffect(() => {
+    if (
       !suppressInitialAnimationRef.current &&
       isNewMessage &&
       lastMessageId &&
@@ -230,10 +263,14 @@ export default function ChatPage() {
   }, [isNewMessage, lastMessageId, chatMessages, user, firstUnreadMessageId]);
 
   const handleMessageSent = useCallback(() => {
-    shouldScrollToBottomRef.current = true;
+    shouldScrollToBottomRef.current = false; // disable smooth logic
     setUnreadCount(0);
     setFirstUnreadMessageId(null);
     lastSeenMessageIdRef.current = chatMessages[chatMessages.length - 1]?.id ?? null;
+
+    if (scrollRef.current && bottomRef.current) {
+      scrollToBottomWhenLayoutStabilizes(scrollRef.current, bottomRef.current);
+    }
   }, [chatMessages]);
 
   const groupedMessages = useMemo(
@@ -296,7 +333,17 @@ export default function ChatPage() {
                     from={msg.senderUserAccountId === user?.userAccountId ? "me" : "them"}
                     animate={shouldAnimate}
                     anchorRef={isFirst ? anchorMessageRef : undefined}
+                    chatRoomId={chatId}
+                    isGroupChat={chatRoomWithParticipants.chatRoomType === "group"}
+                    senderUserAccountId={msg.senderUserAccountId}
+                    getDisplayNameById={() => getDisplayNameById(msg.senderUserAccountId)}
+                    onMediaLoaded={() => {
+                      if (isUserAtBottomRef.current) {
+                        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
                   />
+
                 </div>
               );
             })}
@@ -345,4 +392,27 @@ function groupMessagesByDate(messages: ChatMessage[]) {
   }
 
   return groups;
+}
+
+function scrollToBottomWhenLayoutStabilizes(scrollRef: HTMLElement, bottomRef: HTMLElement) {
+  return new Promise<void>(resolve => {
+    const observer = new ResizeObserver(() => {
+      bottomRef.scrollIntoView({ behavior: "auto" });
+    });
+
+    observer.observe(scrollRef);
+
+    setTimeout(() => {
+      observer.disconnect();
+      bottomRef.scrollIntoView({ behavior: "auto" });
+      resolve();
+    }, 800);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        observer.disconnect();
+        resolve();
+      });
+    });
+  });
 }
