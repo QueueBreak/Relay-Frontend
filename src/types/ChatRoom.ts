@@ -3,4 +3,5 @@ export interface ChatRoom {
   displayName: string
   lastMessage: string
   lastMessageTimestamp: number
+  type: "DIRECT" | "GROUP"
 }

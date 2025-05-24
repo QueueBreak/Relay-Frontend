@@ -8,10 +8,11 @@ import {uploadFile} from "@/api/files.ts";
 
 interface ChatInputProps {
   chatRoomId: string;
+  chatRoomType: string;
   onMessageSent?: () => void;
 }
 
-export function ChatInput({chatRoomId, onMessageSent}: ChatInputProps) {
+export function ChatInput({chatRoomId, onMessageSent, chatRoomType}: ChatInputProps) {
   const {send} = useWebSocket();
   const [messageContent, setMessageContent] = useState<string>("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -42,6 +43,7 @@ export function ChatInput({chatRoomId, onMessageSent}: ChatInputProps) {
       type: "chat",
       payload: {
         destinationChatRoomId: chatRoomId,
+        chatRoomType,
         messageContent: trimmed,
         attachmentFileName,
       },

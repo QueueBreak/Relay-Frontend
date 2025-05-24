@@ -65,7 +65,7 @@ export function NewChatDialog({open, onOpenChange, onChatCreated}: NewChatDialog
   async function handleStartDirectChat(friendId: string) {
     try {
       const req: CreateChatRoomRequest = {
-        chatRoomType: "direct",
+        type: "DIRECT",
         participants: [friendId],
       }
       const res = await createDirectChatRoom(req)
@@ -80,7 +80,7 @@ export function NewChatDialog({open, onOpenChange, onChatCreated}: NewChatDialog
   async function handleCreateGroupChat() {
     try {
       const req: CreateChatRoomRequest = {
-        chatRoomType: "group",
+        type: "GROUP",
         participants: selectedFriendIds,
       }
       const res = await createGroupChatRoom(req, groupName.trim())
@@ -113,7 +113,7 @@ export function NewChatDialog({open, onOpenChange, onChatCreated}: NewChatDialog
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={mode} onValueChange={v => setMode(v as "direct" | "group")}>
+          <Tabs value={mode} onValueChange={(v: string) => setMode(v as "direct" | "group")}>
             <TabsList className="mb-4 w-full justify-center">
               <TabsTrigger value="direct">1-on-1</TabsTrigger>
               <TabsTrigger value="group">Group</TabsTrigger>

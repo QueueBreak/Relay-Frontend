@@ -84,7 +84,7 @@ export function ChatRoomStoreProvider({children}: { children: React.ReactNode })
             displayName: newRoom.displayName ?? prevRoom.displayName,
             lastMessage: newRoom.lastMessage ?? prevRoom.lastMessage,
             lastMessageTimestamp: newRoom.lastMessageTimestamp ?? prevRoom.lastMessageTimestamp,
-            chatRoomType: newRoom.chatRoomType ?? prevRoom.chatRoomType,
+            type: newRoom.type ?? prevRoom.type,
             participants: newRoom.participants?.length ? newRoom.participants : prevRoom.participants,
           }
           : prevRoom

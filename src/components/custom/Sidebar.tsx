@@ -24,7 +24,7 @@ export function Sidebar() {
           displayName: room.displayName,
           lastMessage: room.lastMessage,
           lastMessageTimestamp: room.lastMessageTimestamp,
-          chatRoomType: "direct",
+          type: room.type,
           participants: []
         }
 
@@ -44,7 +44,7 @@ export function Sidebar() {
             displayName: room.displayName,
             lastMessage: room.lastMessage,
             lastMessageTimestamp: room.lastMessageTimestamp,
-            chatRoomType: "direct",
+            type: room.type,
             participants: []
           }
 
@@ -86,6 +86,7 @@ export function Sidebar() {
 
       <div className="overflow-y-auto flex-1">
         {chatRooms.map((chatRoom: ChatRoomWithParticipants) => (
+
           <ChatListItem
             key={chatRoom.chatRoomId}
             name={chatRoom.displayName}

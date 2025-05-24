@@ -1,4 +1,4 @@
 export interface CreateChatRoomRequest {
-  chatRoomType: string
+  type: "DIRECT" | "GROUP"
   participants: string[]
 }

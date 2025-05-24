@@ -195,7 +195,7 @@ export default function ChatPage() {
   useLayoutEffect(() => {
     if (!initialScrollDone.current || !isUserAtBottomRef.current) return;
 
-    bottomRef.current?.scrollIntoView({ behavior: "auto" });
+    bottomRef.current?.scrollIntoView({behavior: "auto"});
   }, [chatMessages]);
 
   useEffect(() => {
@@ -290,6 +290,8 @@ export default function ChatPage() {
     <div className="flex flex-col flex-1 bg-card h-full relative">
       <div className="shrink-0">
         <ChatHeader
+          type={chatRoomWithParticipants.type}
+          participants={chatRoomWithParticipants.participants}
           chatRoomId={chatId}
           displayName={chatRoomWithParticipants.displayName}
           status="online"
@@ -334,12 +336,12 @@ export default function ChatPage() {
                     animate={shouldAnimate}
                     anchorRef={isFirst ? anchorMessageRef : undefined}
                     chatRoomId={chatId}
-                    isGroupChat={chatRoomWithParticipants.chatRoomType === "group"}
+                    isGroupChat={chatRoomWithParticipants.type === "GROUP"}
                     senderUserAccountId={msg.senderUserAccountId}
-                    getDisplayNameById={() => getDisplayNameById(msg.senderUserAccountId)}
+                    getDisplayNameById={getDisplayNameById}
                     onMediaLoaded={() => {
                       if (isUserAtBottomRef.current) {
-                        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+                        bottomRef.current?.scrollIntoView({behavior: "smooth"});
                       }
                     }}
                   />
@@ -369,7 +371,10 @@ export default function ChatPage() {
       }
 
       <div className="shrink-0">
-        <ChatInput chatRoomId={chatId} onMessageSent={handleMessageSent}/>
+        <ChatInput
+          chatRoomId={chatId}
+          chatRoomType={chatRoomWithParticipants.type}
+          onMessageSent={handleMessageSent}/>
       </div>
     </div>
   );
@@ -397,14 +402,14 @@ function groupMessagesByDate(messages: ChatMessage[]) {
 function scrollToBottomWhenLayoutStabilizes(scrollRef: HTMLElement, bottomRef: HTMLElement) {
   return new Promise<void>(resolve => {
     const observer = new ResizeObserver(() => {
-      bottomRef.scrollIntoView({ behavior: "auto" });
+      bottomRef.scrollIntoView({behavior: "auto"});
     });
 
     observer.observe(scrollRef);
 
     setTimeout(() => {
       observer.disconnect();
-      bottomRef.scrollIntoView({ behavior: "auto" });
+      bottomRef.scrollIntoView({behavior: "auto"});
       resolve();
     }, 800);
 

@@ -8,9 +8,22 @@ interface MessageBubbleProps {
   attachmentFileName?: string;
   chatRoomId: string;
   onMediaLoaded?: () => void;
+  isGroupChat?: boolean;
+  senderUserAccountId?: string;
+  getDisplayNameById?: (id: string) => string;
 }
 
-export function MessageBubble({from, text, timestamp, attachmentFileName, chatRoomId, onMediaLoaded}: MessageBubbleProps) {
+export function MessageBubble({
+                                from,
+                                text,
+                                timestamp,
+                                attachmentFileName,
+                                chatRoomId,
+                                onMediaLoaded,
+                                isGroupChat = false,
+                                senderUserAccountId,
+                                getDisplayNameById
+                              }: MessageBubbleProps) {
   const time = new Date(timestamp * 1000).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -18,6 +31,8 @@ export function MessageBubble({from, text, timestamp, attachmentFileName, chatRo
   });
 
   const isMe = from === "me";
+
+  // console.log(isGroupChat)
 
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
   const [attachmentType, setAttachmentType] = useState<"inline" | "attachment" | null>(null);
@@ -55,6 +70,11 @@ export function MessageBubble({from, text, timestamp, attachmentFileName, chatRo
     };
   }, [attachmentFileName, chatRoomId]);
 
+  const senderName =
+    isGroupChat && !isMe && senderUserAccountId && getDisplayNameById
+      ? getDisplayNameById(senderUserAccountId)
+      : null;
+
   return (
     <div className={`flex ${isMe ? "justify-end" : "justify-start"} px-14 mb-1`}>
       <div
@@ -70,6 +90,12 @@ export function MessageBubble({from, text, timestamp, attachmentFileName, chatRo
         `}
         style={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}
       >
+        {senderName && (
+          <div className="text-xs font-semibold mb-1 text-muted-foreground">
+            {senderName}
+          </div>
+        )}
+
         <span>{text}</span>
 
         {attachmentFileName && attachmentUrl && (

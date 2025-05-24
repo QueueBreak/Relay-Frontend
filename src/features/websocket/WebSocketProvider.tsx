@@ -15,6 +15,11 @@ export function WebSocketProvider({children}: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false)
   const socketRef = useRef<WebSocket | null>(null)
   const { chatId } = useParams<{ chatId: string }>();
+  const chatIdRef = useRef<string>(chatId);
+
+  useEffect(() => {
+    chatIdRef.current = chatId ?? "";
+  }, [chatId]);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token")
@@ -47,9 +52,10 @@ export function WebSocketProvider({children}: { children: React.ReactNode }) {
               chatMessage.destinationChatRoomId,
               chatMessage.messageContent,
               chatMessage.timestamp,
-              chatId
+              chatIdRef.current
             );
             appendMessage(chatMessage.destinationChatRoomId, chatMessage)
+
             break
           }
           case "typing": {
@@ -77,7 +83,7 @@ export function WebSocketProvider({children}: { children: React.ReactNode }) {
       socket.close()
       socketRef.current = null
     }
-  }, [appendMessage, chatId, setTyping, updateChatRoomPreview, user])
+  }, [appendMessage, setTyping, updateChatRoomPreview, user])
 
   const send = (msg: WebSocketMessage) => {
     const socket = socketRef.current
