@@ -7,11 +7,13 @@ import {useChatRoomStore} from "@/features/chatroomsstore/useChatRoomStore.tsx";
 import {useParams} from "react-router";
 import {ChatMessage} from "@/types/ChatMessage.ts";
 import {TypingMessage} from "@/types/TypingMessage.ts";
+import {getChatRoomWithParticipants} from "@/api/chatrooms.ts";
+import {CreateChatRoomResponse} from "@/types/CreateChatRoomResponse.ts";
 
 export function WebSocketProvider({children}: { children: React.ReactNode }) {
   const {user} = useAuth()
   const {appendMessage, setTyping} = useChatStore();
-  const {updateChatRoomPreview} = useChatRoomStore();
+  const {updateChatRoomPreview, addOrUpdateRoom} = useChatRoomStore();
   const [isReady, setIsReady] = useState(false)
   const socketRef = useRef<WebSocket | null>(null)
   const { chatId } = useParams<{ chatId: string }>();
@@ -66,6 +68,18 @@ export function WebSocketProvider({children}: { children: React.ReactNode }) {
               typingMessage.senderUserAccountId,
               typingMessage.typing
             );
+            break;
+          }
+          case "chat_room_created": {
+            const newRoom = webSocketMessage.payload as CreateChatRoomResponse;
+            console.log(newRoom)
+            getChatRoomWithParticipants(newRoom.chatRoomId)
+              .then(fetchedRoom => {
+                addOrUpdateRoom(fetchedRoom);
+              })
+              .catch(err => {
+                console.error("Failed to fetch new chat room:", err);
+              });
             break;
           }
           // case "presence":

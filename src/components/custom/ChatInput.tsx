@@ -17,6 +17,7 @@ export function ChatInput({chatRoomId, onMessageSent, chatRoomType}: ChatInputPr
   const [messageContent, setMessageContent] = useState<string>("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -25,16 +26,18 @@ export function ChatInput({chatRoomId, onMessageSent, chatRoomType}: ChatInputPr
   async function handleSendMessage() {
     const trimmed = messageContent.trim();
 
-    if (!trimmed && !attachedFile) return;
+    if (isUploading || (!trimmed && !attachedFile)) return;
 
     let attachmentFileName: string | undefined = undefined;
 
     if (attachedFile) {
       try {
+        setIsUploading(true);
         const response = await uploadFile(chatRoomId, attachedFile);
         attachmentFileName = response.fileName;
       } catch (error) {
         console.error("File upload failed:", error);
+        setIsUploading(false);
         return;
       }
     }
@@ -46,7 +49,7 @@ export function ChatInput({chatRoomId, onMessageSent, chatRoomType}: ChatInputPr
         chatRoomType,
         messageContent: trimmed,
         attachmentFileName,
-      },
+      }
     });
 
     setMessageContent("");
@@ -55,7 +58,7 @@ export function ChatInput({chatRoomId, onMessageSent, chatRoomType}: ChatInputPr
       URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     }
-
+    setIsUploading(false);
     onMessageSent?.();
     stopTyping();
   }
@@ -200,8 +203,10 @@ export function ChatInput({chatRoomId, onMessageSent, chatRoomType}: ChatInputPr
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              stopTyping();
-              handleSendMessage();
+              if (!isUploading) {
+                stopTyping();
+                handleSendMessage();
+              }
             }
           }}
           rows={1}
@@ -220,7 +225,9 @@ export function ChatInput({chatRoomId, onMessageSent, chatRoomType}: ChatInputPr
                   [&::-webkit-scrollbar-track]:bg-white/10"
         />
 
-        <Button onClick={handleSendMessage}>Send</Button>
+        <Button onClick={handleSendMessage} disabled={isUploading}>
+          {isUploading ? "Uploading..." : "Send"}
+        </Button>
       </div>
     </div>
   );
