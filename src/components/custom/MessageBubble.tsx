@@ -32,8 +32,6 @@ export function MessageBubble({
 
   const isMe = from === "me";
 
-  // console.log(isGroupChat)
-
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
   const [attachmentType, setAttachmentType] = useState<"inline" | "attachment" | null>(null);
   const [attachmentContentType, setAttachmentContentType] = useState<string | null>(null);

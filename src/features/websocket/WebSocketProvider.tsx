@@ -72,7 +72,6 @@ export function WebSocketProvider({children}: { children: React.ReactNode }) {
           }
           case "chat_room_created": {
             const newRoom = webSocketMessage.payload as CreateChatRoomResponse;
-            console.log(newRoom)
             getChatRoomWithParticipants(newRoom.chatRoomId)
               .then(fetchedRoom => {
                 addOrUpdateRoom(fetchedRoom);
@@ -82,9 +81,6 @@ export function WebSocketProvider({children}: { children: React.ReactNode }) {
               });
             break;
           }
-          // case "presence":
-          //   console.log("presence")
-          //   break
           default:
             console.warn("Unknown message type:", webSocketMessage)
         }
