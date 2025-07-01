@@ -10,7 +10,7 @@ export function UserAvatar({src, fallbackText}: UserAvatarProps) {
   return (
     <Avatar>
       <AvatarImage src={src}/>
-      <AvatarFallback>{fallbackText}</AvatarFallback>
+      <AvatarFallback className={`text-white bg-purple-900`}>{fallbackText}</AvatarFallback>
     </Avatar>
   )
 }
